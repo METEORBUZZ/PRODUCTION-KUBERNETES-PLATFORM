@@ -1,0 +1,12 @@
+aws_region          = "us-east-1"
+environment         = "production"
+project_name        = "catdog-platform"
+vpc_cidr            = "10.0.0.0/16"
+kubernetes_version  = "1.31"
+node_instance_types = ["t3.medium", "t3a.medium"]
+min_nodes           = 3
+max_nodes           = 10
+desired_nodes       = 3
+db_instance_class   = "db.t4g.medium"
+db_name             = "catdog"
+db_username         = "catdogadmin"

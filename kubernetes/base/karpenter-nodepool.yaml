@@ -1,0 +1,45 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: general-compute
+spec:
+  template:
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64", "arm64"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand", "spot"]
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["t3", "m6i", "m6a", "c6i"]
+      expireAfter: 720h # 30 days node expiration for security hygiene
+  limits:
+    cpu: "100"
+    memory: 200Gi
+  disruption:
+    consolidationPolicy: WhenUnderutilized
+    consolidateAfter: 1m
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+spec:
+  amiFamily: AL2023
+  role: "catdog-platform-eks-nodes-role"
+  subnetSelectorTerms:
+    - tags:
+        "karpenter.sh/discovery": "catdog-platform-cluster"
+  securityGroupSelectorTerms:
+    - tags:
+        "karpenter.sh/discovery": "catdog-platform-cluster"
+  tags:
+    Name: "catdog-platform-karpenter-node"
+    Environment: "production"

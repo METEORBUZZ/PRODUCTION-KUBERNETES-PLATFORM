@@ -1,0 +1,133 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: catdog-platform
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# DNS Egress allow for all pods to resolve internal cluster services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: catdog-platform
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Backend NetworkPolicy: allows ingress from Frontend and Ingress, egress to PostgreSQL
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-traffic
+  namespace: catdog-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: catdog-backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from Frontend pods
+    - from:
+        - podSelector:
+            matchLabels:
+              app: catdog-frontend
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow from Ingress Controller
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: ["ingress-nginx", "aws-load-balancer-controller"]
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow from Prometheus
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow egress to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: catdog-postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+# Frontend NetworkPolicy: allows ingress from Ingress Controller, egress to Backend
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-traffic
+  namespace: catdog-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: catdog-frontend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: catdog-backend
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+# PostgreSQL NetworkPolicy: allows ingress only from Backend pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-traffic
+  namespace: catdog-platform
+spec:
+  podSelector:
+    matchLabels:
+      app: catdog-postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: catdog-backend
+      ports:
+        - protocol: TCP
+          port: 5432

@@ -1,152 +1,209 @@
-# Production Kubernetes Platform — 3D Cat vs Dog Voting Application
+# 🚀 Production Kubernetes Platform on AWS
 
 [![CI Pipeline](https://github.com/production-kubernetes-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/production-kubernetes-platform/actions)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.31-326ce5.svg?logo=kubernetes&logoColor=white)](https://kubernetes.io)
 [![AWS EKS](https://img.shields.io/badge/AWS-EKS-FF9900.svg?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/eks/)
-[![React Three Fiber](https://img.shields.io/badge/Three.js-R3F-000000.svg?logo=three.js&logoColor=white)](https://threejs.org)
-[![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-E6522C.svg?logo=prometheus&logoColor=white)](https://prometheus.io)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg?logo=postgresql&logoColor=white)](https://postgresql.org)
+[![Terraform](https://img.shields.io/badge/Terraform-1.5+-844FBA.svg?logo=terraform&logoColor=white)](https://terraform.io)
+[![Argo CD](https://img.shields.io/badge/GitOps-Argo%20CD-EF7B4D.svg?logo=argo&logoColor=white)](https://argoproj.github.io/cd/)
+[![Kyverno](https://img.shields.io/badge/Policy-Kyverno-1E90FF.svg)](https://kyverno.io)
+[![PostgreSQL](https://img.shields.io/badge/Amazon%20RDS-PostgreSQL%2016-336791.svg?logo=postgresql&logoColor=white)](https://aws.amazon.com/rds/)
 
-An enterprise-grade, high-availability Kubernetes platform running a **cinematic 3D Cat vs Dog voting application**.
+An enterprise-grade, highly available, secure, observable, and automated **Production Kubernetes Platform on AWS**.
 
-> **Core Purpose**: Users vote for either **CAT 🐱** or **DOG 🐶** and see real-time voting consensus powered by an ACID-compliant PostgreSQL database, auto-scaling Kubernetes microservices, zero-trust network policies, and full-stack Prometheus observability.
+The application workload is a **3D Cat vs Dog voting application** used to demonstrate real-world cloud engineering practices:
+- **Cloud Infrastructure**: AWS Multi-AZ VPC, Amazon EKS v1.31, Amazon ECR, Amazon RDS PostgreSQL, Route 53, ACM, and AWS Secrets Manager.
+- **Infrastructure as Code**: Modular Terraform (`modules/vpc`, `modules/eks`, `modules/rds`, `modules/iam`, `modules/ecr`) with remote state locking.
+- **GitOps Continuous Delivery**: Argo CD continuous synchronization, automatic drift correction, and self-healing.
+- **DevSecOps & Policy Enforcement**: Non-root containers, read-only root filesystems, Aquasecurity Trivy image scanning, and Kyverno admission policies.
+- **Observability**: Prometheus metrics scraping, custom voting counters, Grafana dashboards, and Amazon CloudWatch log retention.
+- **Reliability & Resilience**: Triple probe strategy, Pod Anti-Affinity, PDB (`minAvailable: 2`), HPA autoscaling (3–10 pods), and Multi-AZ RDS failover.
+
+> 📖 **Beginner AWS & EKS Runbook**: Looking for a step-by-step CLI deployment guide? Check out [COMMANDS.md](COMMANDS.md) for copy-paste commands from `terraform apply` to live URL access.
 
 ---
 
-## 1. Visual Experience & Character Showcase
+## 1. Core Principle — No Overengineering
+
+Every single technology in this platform has a documented architectural justification:
 
 ```text
-        CAT 🐱                 VS                 DOG 🐶
-
-    [ 3D Living Cat ]                     [ 3D Living Dog ]
-      Warm Ginger Fur                       Warm Caramel Fur
-      Natural Breathing                     Wagging Bushy Tail
-      Studio Pedestal                       Studio Pedestal
-
-     [ VOTE FOR CAT ]                      [ VOTE FOR DOG ]
-
-                        CURRENT LEADER
-                     🐱 CAT LEADING (52%)
-
-    CAT 52%  [ ● ● ● ● ● ● ● ● ● ●   ● ● ● ● ● ● ● ● ● ]  48% DOG
-                   Total Consensus: 10,245
+Tool:                     Purpose:
+Docker                    Containerization & immutable runtimes
+Amazon ECR                Secure, immutable OCI container registry
+Terraform                 Declarative Infrastructure as Code (IaC)
+Amazon EKS                Multi-AZ managed Kubernetes control plane
+Helm                      Modular Kubernetes package management
+GitHub Actions            Continuous Integration (CI) and Trivy security scanning
+Argo CD                   Declarative GitOps Continuous Delivery (CD)
+AWS ALB Controller        Native AWS Ingress integration with ACM TLS 1.3
+Amazon RDS PostgreSQL     Multi-AZ relational persistence (ACID safe)
+AWS Secrets Manager       Enterprise secrets vault with KMS encryption
+External Secrets Operator Synchronizes AWS Secrets to Kubernetes via IRSA
+Kyverno                   Kubernetes-native policy enforcement (Non-root, PSS)
+Prometheus & Grafana      Metrics collection & SRE visualization
+Amazon CloudWatch         Centralized platform and container audit logging
 ```
 
-- **Cinematic 3D Character Arena**: Three.js + React Three Fiber studio environment with soft directional key lighting, rim highlights, subtle floating ambient motes, and realistic contact shadows.
-- **Dynamic Camera Parallax**: Smooth cursor tracking that gently pans and tilts the camera while characters track user gaze.
-- **Micro-Interactions**: Tactile mechanical voting buttons with celebratory character animations, atomic vote counter increments, and dynamic dot-matrix arena balance visualization.
-- **Restrained Palette**: Sophisticated neutral charcoal studio backdrop (`#141312`) allowing the warm, natural fur tones of the characters to provide visual personality without garish neon gradients or generic dashboard templates.
+> **Strictly Avoided**: Jenkins, GitLab CI, Ansible, Istio, Kafka, Redis, Elasticsearch/Logstash/Kibana, Loki, Jaeger, Rancher, and artificial microservices.
+
+*See the complete [Mandatory Tool Justification Matrix](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/00-tool-justification-matrix.md).*
 
 ---
 
-## 2. Platform Architecture
+## 2. High-Level Target Architecture
 
 ```text
-[ Internet User / Mobile / Desktop ]
-                │
-                ▼ (HTTPS :443)
-       [ AWS Route 53 DNS ]
-                │
-                ▼
-   [ AWS Application Load Balancer ]
-                │
-                ▼ (Target Group: Pod IPs)
-   [ Kubernetes Ingress (AWS Load Balancer Controller) ]
-                │
-        ┌───────┴───────────────────────┐
-        ▼ (Path: /)                     ▼ (Path: /api, /health, /metrics)
-[ Frontend Service: 8080 ]      [ Backend Service: 8080 ]
-        │ (ClusterIP)                   │ (ClusterIP)
-        ▼                               ▼
-[ Frontend Pods (3 Replicas) ]  [ Backend Pods (3 Replicas) ]
-  • React 18 + Three.js           • Node.js 22 + TypeScript
-  • Unprivileged Nginx            • prom-client Telemetry
-  • Read-Only Root Filesystem     • Atomic SQL Transactions
-                                        │
-                                        ▼ (Port: 5432)
-                        [ PostgreSQL Database Service ]
-                          • AWS RDS Multi-AZ / StatefulSet
-                          • ACID Atomic Counter Increments
-                          • Check Constraint (count >= 0)
+                    Internet
+                       │
+                       ▼
+                Route 53 / DNS
+                       │
+                       ▼
+                 ACM / HTTPS (TLS 1.3)
+                       │
+                       ▼
+              AWS Load Balancer (ALB)
+                       │ (Target-Type: IP)
+                       ▼
+             ┌─────────────────────────┐
+             │       Amazon EKS        │
+             │   Multi-AZ (Private)    │
+             └─────────┬───────────────┘
+                       │
+                Kubernetes Service (ClusterIP)
+                       │
+              ┌────────┼────────┐
+              ▼        ▼        ▼
+           Backend  Backend  Backend (3 Replicas Minimum)
+              │        │        │
+              └────────┼────────┘
+                       │ (Private DB Subnets: Port 5432)
+                       ▼
+            Amazon RDS PostgreSQL (Multi-AZ)
+
+
+Supporting Cloud & DevOps Automation:
+
+Terraform (IaC)
+    ├── modules/vpc
+    ├── modules/eks
+    ├── modules/rds
+    ├── modules/iam
+    └── modules/ecr
+
+GitHub Actions (CI)
+    └── Lint → Unit Tests → Trivy Scan → Docker Build → Push ECR
+
+Argo CD (GitOps CD)
+    └── Continuous Git-to-Cluster Sync → Automated Drift Correction
+
+Security & Governance:
+    ├── Kyverno (Disallow Root, Privileged, HostPath)
+    ├── External Secrets Operator (AWS Secrets Manager sync via IRSA)
+    └── Pod Security Standards (restricted)
+
+Observability:
+    ├── Prometheus → Metrics Collection (/metrics)
+    ├── Grafana → SRE Dashboards
+    └── Amazon CloudWatch → Container & Audit Logs
 ```
 
 ---
 
-## 3. Production Kubernetes Features
+## 3. Repository Structure
 
-- **High Availability**: Minimum 3 replicas per service with Pod Anti-Affinity spreading replicas across distinct physical worker nodes (`kubernetes.io/hostname`).
-- **Zero-Downtime Upgrades**: `RollingUpdate` with `maxSurge: 1`, `maxUnavailable: 0` ensuring zero dropped requests during new releases.
-- **Pod Disruption Budget (PDB)**: `minAvailable: 2` guarantees service availability during node drains and cluster upgrades.
-- **Autoscaling (HPA)**: Automatically scales between 3 and 10 replicas based on 70% CPU and 80% Memory utilization thresholds.
-- **Zero-Trust Security**:
-  - `restricted` Pod Security Standards enforced on namespace.
-  - Non-root containers (Backend UID `10001`, Frontend UID `101`).
-  - Read-only root filesystems with `ALL` Linux capabilities dropped.
-  - Zero-trust `NetworkPolicy` isolating frontend, backend, database, and ingress.
-- **Triple Health Probes**: `startupProbe`, `readinessProbe` (verifies DB `SELECT 1`), and `livenessProbe` on all deployments.
+```text
+production-kubernetes-platform/
+│
+├── frontend/                     # React 18, Vite, Three.js, R3F, Tailwind CSS
+├── backend/                      # Node.js 22, Express, TypeScript, prom-client
+├── database/
+│   └── init.sql                  # PostgreSQL schema, UNIQUE constraints & triggers
+│
+├── docker/
+│   ├── Dockerfile.backend        # Multi-stage production backend image (UID 10001)
+│   ├── Dockerfile.frontend       # Multi-stage unprivileged Nginx frontend image (UID 101)
+│   └── nginx/default.conf        # Security headers, gzip, and API reverse proxy
+│
+├── terraform/                    # Modular Infrastructure as Code
+│   ├── modules/
+│   │   ├── vpc/                  # Multi-AZ VPC with 3 public, 3 private app, 3 private db subnets
+│   │   ├── eks/                  # EKS cluster v1.31, KMS encryption, managed node groups
+│   │   ├── rds/                  # Multi-AZ RDS PostgreSQL with AWS Secrets Manager
+│   │   ├── iam/                  # EKS roles, node roles, ALB controller IRSA, ESO IRSA
+│   │   └── ecr/                  # Repositories with scan-on-push and lifecycle rules
+│   └── environments/
+│       └── production/           # Root environment composition with S3 state backend
+│
+├── helm/
+│   └── cat-dog-voting/           # Modular production Helm chart
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       └── templates/            # Deployment, Service, Ingress, HPA, PDB, NetworkPolicy
+│
+├── argocd/                       # GitOps specifications
+│   ├── application.yaml          # Argo CD Application (automated sync, prune, self-heal)
+│   ├── appproject.yaml           # Argo CD AppProject with destination boundaries
+│   └── install.yaml              # Argo CD bootstrap guide
+│
+├── security/
+│   ├── kyverno/                  # Admission policies (require-non-root, drop-caps, limits)
+│   └── external-secrets/         # AWS Secrets Manager SecretStore & ExternalSecret
+│
+├── monitoring/
+│   ├── prometheus/               # Prometheus scraping config & SRE alert rules
+│   └── grafana/                  # Provisioning & JSON dashboards for voting telemetry
+│
+├── scripts/
+│   ├── load-test.js              # Concurrency load test (verifies 0 lost votes)
+│   ├── load-test.sh              # Load test wrapper
+│   ├── smoke-test.sh             # Health, readiness, and API validation
+│   └── failure-test.sh           # Resilience suite (pod kill, rolling update, rollback)
+│
+├── docs/                         # Comprehensive 18-part engineering documentation
+├── .github/workflows/
+│   ├── ci.yml                    # Pull Request CI pipeline (test, trivy, k8s/tf validate)
+│   └── cd.yml                    # Main branch CD pipeline (OIDC auth, ECR push, rollout)
+│
+├── docker-compose.yml            # Local simulation stack
+├── Makefile                      # Standardized developer workflows
+├── README.md                     # Master documentation
+└── .gitignore
+```
 
 ---
 
-## 4. Quickstart Guide
+## 4. Local Quickstart & Testing
 
-### Prerequisites
-- Node.js 22+ & npm
-- Docker Desktop or Docker Engine
-- `kubectl` & `terraform` (for cloud deployments)
-
-### 1. Run Locally with Docker Compose
 ```bash
-# Starts Postgres, Backend, Frontend, Prometheus, and Grafana
+# 1. Start full multi-container stack locally via Docker Compose
 make dev
-```
-- **Web Application**: [http://localhost:3000](http://localhost:3000)
-- **Backend API**: [http://localhost:8080/api/votes](http://localhost:8080/api/votes)
-- **Health Check**: [http://localhost:8080/health](http://localhost:8080/health)
-- **Prometheus Metrics**: [http://localhost:8080/metrics](http://localhost:8080/metrics)
-- **Prometheus Dashboard**: [http://localhost:9090](http://localhost:9090)
-- **Grafana Visualization**: [http://localhost:3001](http://localhost:3001) (User: `admin` / Password: `admin`)
 
-### 2. Run Tests & Validation
-```bash
-make test          # Run backend unit/integration tests & frontend lint
-make build         # Compile production distribution bundles
-make k8s-validate  # Validate Kubernetes base & production overlay manifests
-make load-test     # Run concurrency load test verifying zero lost votes
+# 2. Run automated test suites
+make test         # Backend unit tests & frontend type checks
+make load-test    # Concurrency test (verifies atomic updates & 0 lost votes)
+make k8s-validate # Validates Kubernetes manifests against API schemas
+
+# 3. Access local endpoints
+# Application UI:        http://localhost:3002
+# Backend API:           http://localhost:8080/api/votes
+# Prometheus Console:    http://localhost:9090
+# Grafana Dashboards:    http://localhost:3001 (admin / admin)
 ```
 
 ---
 
-## 5. Developer Commands Reference (`Makefile`)
+## 5. Comprehensive Documentation Library
 
-| Command | Action |
-| :--- | :--- |
-| `make install` | Installs dependencies for backend and frontend. |
-| `make dev` | Launches full multi-container development environment via Docker Compose. |
-| `make test` | Executes Jest test suites and TypeScript type checking. |
-| `make build` | Compiles production assets for backend (Node.js) and frontend (Vite). |
-| `make docker-build` | Builds multi-stage production Docker images with immutable Git SHA tags. |
-| `make docker-scan` | Runs Aquasecurity Trivy vulnerability scanning on built container images. |
-| `make k8s-validate` | Validates Kubernetes Kustomize manifests against API schemas. |
-| `make deploy` | Deploys Kustomize production overlay to Kubernetes and waits for rollout. |
-| `make status` | Queries pods, services, HPA, PDB, and ingress in namespace `catdog-platform`. |
-| `make logs` | Streams live logs from backend pods. |
-| `make load-test` | Executes concurrent voting load test and verifies 100% data consistency. |
-| `make rollback` | Reverts deployment to previous stable revision with zero downtime. |
+All platform specifications, runbooks, and design decisions are cataloged in [`docs/`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs):
 
----
-
-## 6. Comprehensive Documentation Library
-
-Detailed engineering documentation is organized inside [`docs/`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs):
-
-- [`01-architecture.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/01-architecture.md): System architecture, network flow, and security posture.
-- [`02-3d-ui-ux.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/02-3d-ui-ux.md): 3D character showcase, Three.js shaders, lighting, and camera parallax.
-- [`03-backend-api.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/03-backend-api.md): REST API endpoints, concurrency handling, and Prometheus metrics.
-- [`04-database-design.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/04-database-design.md): PostgreSQL relational schema, atomic updates, and RDS Multi-AZ.
-- [`05-docker-containers.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/05-docker-containers.md): Multi-stage builds, non-root users, and container hardening.
-- [`06-kubernetes-platform.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/06-kubernetes-platform.md): Deployments, HPA, PDB, NetworkPolicies, and Pod Security Standards.
-- [`07-terraform-aws-eks.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/07-terraform-aws-eks.md): AWS VPC, EKS v1.31, Managed Node Groups, ECR, IAM, and RDS.
-- [`08-ci-cd-pipelines.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/08-ci-cd-pipelines.md): GitHub Actions pull request and production release pipelines.
-- [`09-observability-monitoring.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/09-observability-monitoring.md): Prometheus scrape configs, Grafana dashboards, and alerting rules.
-- [`10-testing-and-resilience.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/10-testing-and-resilience.md): Concurrency testing, pod failure simulation, and rolling rollbacks.
-- [`11-junior-engineer-handbook.md`](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/11-junior-engineer-handbook.md): Complete setup guide (What/Why/Install/Config/Troubleshooting) for all tools.
+1. **[Tool Justification Matrix](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/00-tool-justification-matrix.md)**: Mandatory justification for EVERY tool in the stack.
+2. **[AWS Cloud Architecture](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/12-aws-cloud-architecture.md)**: VPC, Subnet design, CIDR routing, and network flow.
+3. **[GitOps Delivery with Argo CD](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/13-gitops-argocd-workflow.md)**: Git-as-source-of-truth, drift detection, and automated rollback.
+4. **[Security, DevSecOps & Kyverno](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/14-security-and-devsecops.md)**: Trivy scanning, Kyverno policies, and AWS Secrets Manager integration.
+5. **[Node Autoscaling: Karpenter vs MNG](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/15-node-autoscaling-karpenter.md)**: Dynamic node provisioning and consolidation analysis.
+6. **[FinOps & Cost Modeling](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/16-finops-and-cost-control.md)**: Detailed AWS monthly cost breakdown (~$304/month) and optimization tactics.
+7. **[Disaster Recovery & Business Continuity](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/17-disaster-recovery-and-backup.md)**: RTO (< 15 mins), RPO (< 5 mins), Multi-AZ failover, and RDS restore runbook.
+8. **[Production Readiness Checklist](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/18-production-readiness-checklist.md)**: Complete compliance checklist across all operational domains.
+9. **[Junior Engineer Onboarding Handbook](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/11-junior-engineer-handbook.md)**: Tool-by-tool setup and troubleshooting guide.
+10. **[Testing, Load Generation & Failure Suite](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/10-testing-and-resilience.md)**: Pod failure injection, rolling updates, and verification.

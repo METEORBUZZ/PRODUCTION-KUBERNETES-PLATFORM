@@ -1,0 +1,25 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: catdog-backend-pdb
+  namespace: catdog-platform
+  labels:
+    app: catdog-backend
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: catdog-backend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: catdog-frontend-pdb
+  namespace: catdog-platform
+  labels:
+    app: catdog-frontend
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: catdog-frontend

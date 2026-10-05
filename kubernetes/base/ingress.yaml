@@ -1,0 +1,68 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: catdog-ingress
+  namespace: catdog-platform
+  labels:
+    app.kubernetes.io/name: catdog-ingress
+    app.kubernetes.io/part-of: catdog-voting
+  annotations:
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+spec:
+  rules:
+    - host: catdog.production.internal
+      http:
+        paths:
+          # Backend API & Health Endpoints
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: catdog-backend
+                port:
+                  number: 8080
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: catdog-backend
+                port:
+                  number: 8080
+          - path: /ready
+            pathType: Exact
+            backend:
+              service:
+                name: catdog-backend
+                port:
+                  number: 8080
+          - path: /version
+            pathType: Exact
+            backend:
+              service:
+                name: catdog-backend
+                port:
+                  number: 8080
+          - path: /metrics
+            pathType: Exact
+            backend:
+              service:
+                name: catdog-backend
+                port:
+                  number: 8080
+          # Frontend Root UI
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: catdog-frontend
+                port:
+                  number: 8080

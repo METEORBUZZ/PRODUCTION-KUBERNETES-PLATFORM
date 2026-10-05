@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catdog-config
+  namespace: catdog-platform
+  labels:
+    app.kubernetes.io/name: catdog-config
+    app.kubernetes.io/part-of: catdog-voting
+data:
+  NODE_ENV: "production"
+  PORT: "8080"
+  DB_HOST: "catdog-postgres"
+  DB_PORT: "5432"
+  DB_NAME: "catdog"
+  DB_POOL_MAX: "25"
+  CORS_ORIGIN: "*"
+  LOG_LEVEL: "info"

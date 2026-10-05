@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: catdog-backend-monitor
+  namespace: catdog-platform
+  labels:
+    app: catdog-backend
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: catdog-backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 10s
+      scrapeTimeout: 5s

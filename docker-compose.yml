@@ -1,0 +1,120 @@
+services:
+  # ========================================================
+  # Database Service (PostgreSQL 16)
+  # ========================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: catdog-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: catdog
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d catdog"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - catdog-network
+
+  # ========================================================
+  # Backend API Service (Node.js TypeScript)
+  # ========================================================
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: catdog-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgrespassword
+      DB_NAME: catdog
+      DB_POOL_MAX: 20
+      CORS_ORIGIN: "*"
+      GIT_SHA: "compose-dev"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - catdog-network
+
+  # ========================================================
+  # Frontend UI Service (React 3D + Nginx Non-Root)
+  # ========================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: catdog-frontend
+    restart: unless-stopped
+    ports:
+      - "3002:8080"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - catdog-network
+
+  # ========================================================
+  # Prometheus Telemetry Collector
+  # ========================================================
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: catdog-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - catdog-network
+
+  # ========================================================
+  # Grafana Dashboards & Metrics Visualization
+  # ========================================================
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: catdog-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - catdog-network
+
+networks:
+  catdog-network:
+    driver: bridge
+
+volumes:
+  pgdata:

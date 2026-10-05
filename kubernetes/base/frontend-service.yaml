@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: catdog-frontend
+  namespace: catdog-platform
+  labels:
+    app: catdog-frontend
+    app.kubernetes.io/name: catdog-frontend
+    app.kubernetes.io/part-of: catdog-voting
+spec:
+  type: ClusterIP
+  selector:
+    app: catdog-frontend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP

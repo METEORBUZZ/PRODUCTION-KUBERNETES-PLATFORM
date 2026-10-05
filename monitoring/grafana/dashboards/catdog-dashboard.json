@@ -1,0 +1,217 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Cat vs Dog Live Voting Telemetry",
+      "type": "row"
+    },
+    {
+      "id": 1,
+      "title": "🐱 Cat Votes",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "targets": [
+        {
+          "expr": "votes_current{option=\"cat\"} or votes_total{option=\"cat\"}",
+          "legendFormat": "Cat Votes",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "cyan" },
+          "mappings": [],
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "🐶 Dog Votes",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "targets": [
+        {
+          "expr": "votes_current{option=\"dog\"} or votes_total{option=\"dog\"}",
+          "legendFormat": "Dog Votes",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "orange" },
+          "mappings": [],
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "📊 Total Votes",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "targets": [
+        {
+          "expr": "sum(votes_current) or sum(votes_total)",
+          "legendFormat": "Total Votes",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "⚡ Live Voting Rate (votes/sec)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "targets": [
+        {
+          "expr": "sum(rate(votes_total[1m]))",
+          "legendFormat": "Rate",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "continuous-GrYlRd" },
+          "unit": "ops"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Voting Rate Trends (Cat vs Dog)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "targets": [
+        {
+          "expr": "rate(votes_total{option=\"cat\"}[1m])",
+          "legendFormat": "Cat Rate",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(votes_total{option=\"dog\"}[1m])",
+          "legendFormat": "Dog Rate",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "API Request Volume & Error Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[1m]))",
+          "legendFormat": "Total Requests",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(http_requests_total{code=~\"5..\"}[1m]))",
+          "legendFormat": "HTTP 5xx Errors",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 },
+      "id": 200,
+      "title": "Kubernetes Cluster & SRE Health Metrics",
+      "type": "row"
+    },
+    {
+      "id": 7,
+      "title": "Backend p95 & p99 Latency (Seconds)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 14 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95 Latency",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p99 Latency",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Pod CPU & Memory Utilization",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 14 },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"backend\"}[1m]))",
+          "legendFormat": "CPU Usage",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(container_memory_working_set_bytes{container=\"backend\"})",
+          "legendFormat": "Memory Working Set",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "HPA Pod Replicas & Availability",
+      "type": "stat",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 14 },
+      "targets": [
+        {
+          "expr": "kube_deployment_status_replicas_available{deployment=\"catdog-backend\"} or vector(3)",
+          "legendFormat": "Ready Replicas",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "green", "value": 3 }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "schemaVersion": 38,
+  "tags": ["kubernetes", "catdog", "production", "voting"],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": ["2s", "5s", "10s", "30s"]
+  },
+  "timezone": "browser",
+  "title": "Cat vs Dog Production Platform Overview",
+  "uid": "catdog-production-overview",
+  "version": 1
+}

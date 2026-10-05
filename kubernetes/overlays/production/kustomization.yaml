@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: catdog-platform
+
+resources:
+  - ../../base
+
+commonLabels:
+  environment: production
+  managed-by: kustomize
+
+images:
+  - name: catdog-backend
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/catdog-backend
+    newTag: v1.0.0
+  - name: catdog-frontend
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/catdog-frontend
+    newTag: v1.0.0

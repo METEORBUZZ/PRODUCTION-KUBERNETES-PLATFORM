@@ -1,0 +1,59 @@
+# ==========================================
+# Stage 1: Build TypeScript Application
+# ==========================================
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies needed for build
+COPY backend/package*.json ./
+RUN npm ci
+
+# Copy source code and build config
+COPY backend/tsconfig.json ./
+COPY backend/src ./src
+
+# Compile TypeScript to JavaScript
+RUN npm run build
+
+# Remove development dependencies
+RUN npm prune --production
+
+# ==========================================
+# Stage 2: Minimal Production Runtime
+# ==========================================
+FROM node:22-alpine AS runner
+
+# Set metadata and labels
+LABEL maintainer="Platform Engineering Team"
+LABEL description="Production Kubernetes Platform - Cat vs Dog Backend API"
+LABEL org.opencontainers.image.source="https://github.com/production-kubernetes-platform"
+
+WORKDIR /app
+
+# Create dedicated non-root user and group (least privilege)
+RUN addgroup -g 10001 -S appgroup && \
+    adduser -u 10001 -S appuser -G appgroup
+
+# Set production environment variables
+ENV NODE_ENV=production \
+    PORT=8080 \
+    APP_VERSION=1.0.0
+
+# Copy node_modules and compiled output from builder
+COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
+COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
+COPY --from=builder --chown=appuser:appgroup /app/package.json ./package.json
+
+# Switch to non-root user
+USER 10001:10001
+
+# Expose HTTP port
+EXPOSE 8080
+
+# Native container health check targeting the liveness endpoint
+HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/health || exit 1
+
+# Start production server
+CMD ["node", "dist/server.js"]

@@ -1,0 +1,40 @@
+groups:
+  - name: catdog-platform-alerts
+    rules:
+      - alert: CatDogHighErrorRate
+        expr: (sum(rate(http_requests_total{code=~"5.."}[2m])) / sum(rate(http_requests_total[2m]))) * 100 > 5
+        for: 1m
+        labels:
+          severity: critical
+          tier: backend
+        annotations:
+          summary: "High HTTP 5xx error rate detected on Cat vs Dog Voting API"
+          description: "Over 5% of requests returned HTTP 5xx over the last 2 minutes."
+
+      - alert: CatDogHighLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[2m])) by (le)) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          tier: backend
+        annotations:
+          summary: "Cat vs Dog API p95 latency is exceeding 500ms"
+          description: "95th percentile latency is {{ $value }}s, indicating possible database or CPU bottleneck."
+
+      - alert: CatDogPodCrashLooping
+        expr: increase(kube_pod_container_status_restarts_total{container="backend"}[5m]) > 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cat vs Dog backend pod is crash looping"
+          description: "Container restarted more than 2 times in 5 minutes."
+
+      - alert: CatDogReplicasDegraded
+        expr: kube_deployment_status_replicas_available{deployment="catdog-backend"} < 2
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cat vs Dog backend replicas degraded"
+          description: "Available replicas dropped below minimum quorum (less than 2)."

@@ -1,0 +1,16 @@
+# Argo CD Production Installation Guide & Bootstrap Manifest
+# Official non-HA / HA bootstrap reference for production EKS
+#
+# To install Argo CD into the EKS cluster:
+# kubectl create namespace argocd
+# kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+#
+# Once installed, apply the project and application:
+# kubectl apply -f argocd/appproject.yaml
+# kubectl apply -f argocd/application.yaml
+#
+# Retrieve the admin initial secret:
+# kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+#
+# Access the web UI via port-forward:
+# kubectl port-forward svc/argocd-server -n argocd 8443:443
