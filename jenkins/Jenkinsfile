@@ -1,0 +1,141 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  environment {
+    AWS_REGION = 'us-east-1'
+    AWS_DEFAULT_REGION = 'us-east-1'
+    AWS_CREDENTIALS_ID = 'jenkins-aws-credentials'
+    GIT_CREDENTIALS_ID = 'github-write-token'
+    BACKEND_REPOSITORY = 'catdog-platform-backend'
+    FRONTEND_REPOSITORY = 'catdog-platform-frontend'
+  }
+
+  stages {
+    stage('Detect image-update commit') {
+      steps {
+        script {
+          env.SKIP_IMAGE_PUBLISH = sh(
+            returnStatus: true,
+            script: "git log -1 --format=%s | grep -Eq '^chore\\(deploy\\): update image tags'"
+          ) == 0 ? 'true' : 'false'
+        }
+      }
+    }
+
+    stage('Backend CI') {
+      steps {
+        dir('backend') {
+          sh '''
+            npm ci
+            npm run lint
+            npm test
+            npm run build
+          '''
+        }
+      }
+    }
+
+    stage('Frontend CI') {
+      steps {
+        dir('frontend') {
+          sh '''
+            npm ci
+            npm run lint
+            npm run build
+          '''
+        }
+      }
+    }
+
+    stage('Validate infrastructure') {
+      steps {
+        sh '''
+          kustomize build kubernetes/base > /dev/null
+          kustomize build kubernetes/overlays/production > /dev/null
+          terraform -chdir=terraform fmt -check -recursive
+          terraform -chdir=terraform init -backend=false
+          terraform -chdir=terraform validate
+        '''
+      }
+    }
+
+    stage('Build and scan images') {
+      steps {
+        script {
+          env.IMAGE_TAG = "${env.GIT_COMMIT.take(12)}-${env.BUILD_NUMBER}"
+          env.BACKEND_IMAGE = "${env.BACKEND_REPOSITORY}:${env.IMAGE_TAG}"
+          env.FRONTEND_IMAGE = "${env.FRONTEND_REPOSITORY}:${env.IMAGE_TAG}"
+        }
+        sh '''
+          docker build --pull -t "$BACKEND_IMAGE" -f docker/Dockerfile.backend .
+          docker build --pull -t "$FRONTEND_IMAGE" -f docker/Dockerfile.frontend .
+          trivy image --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL "$BACKEND_IMAGE"
+          trivy image --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL "$FRONTEND_IMAGE"
+        '''
+      }
+    }
+
+    stage('Publish images and update GitOps') {
+      when {
+        branch 'main'
+        expression { env.SKIP_IMAGE_PUBLISH != 'true' }
+      }
+      steps {
+        withCredentials([
+          usernamePassword(
+            credentialsId: "${AWS_CREDENTIALS_ID}",
+            usernameVariable: 'AWS_ACCESS_KEY_ID',
+            passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+          )
+        ]) {
+          script {
+            env.AWS_ACCOUNT_ID = sh(
+              returnStdout: true,
+              script: 'aws sts get-caller-identity --query Account --output text'
+            ).trim()
+            env.ECR_REGISTRY = "${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
+            env.BACKEND_IMAGE = "${env.ECR_REGISTRY}/${env.BACKEND_REPOSITORY}:${env.IMAGE_TAG}"
+            env.FRONTEND_IMAGE = "${env.ECR_REGISTRY}/${env.FRONTEND_REPOSITORY}:${env.IMAGE_TAG}"
+            env.DOCKER_CONFIG = sh(returnStdout: true, script: 'mktemp -d').trim()
+
+            try {
+              sh '''
+                aws ecr get-login-password --region "$AWS_REGION" |
+                  docker login --username AWS --password-stdin "$ECR_REGISTRY"
+                docker tag "$BACKEND_REPOSITORY:$IMAGE_TAG" "$BACKEND_IMAGE"
+                docker tag "$FRONTEND_REPOSITORY:$IMAGE_TAG" "$FRONTEND_IMAGE"
+                docker push "$BACKEND_IMAGE"
+                docker push "$FRONTEND_IMAGE"
+                python3 jenkins/update-image-values.py \
+                  --values helm/cat-dog-voting/values.yaml \
+                  --registry "$ECR_REGISTRY" \
+                  --tag "$IMAGE_TAG"
+                git config user.name "jenkins"
+                git config user.email "jenkins@users.noreply.github.com"
+                git add helm/cat-dog-voting/values.yaml
+                if ! git diff --cached --quiet; then
+                  git commit -m "chore(deploy): update image tags to $IMAGE_TAG"
+                fi
+              '''
+            } finally {
+              sh 'rm -rf -- "$DOCKER_CONFIG"'
+            }
+          }
+        }
+        withCredentials([
+          gitUsernamePassword(
+            credentialsId: "${GIT_CREDENTIALS_ID}",
+            gitToolName: 'Default'
+          )
+        ]) {
+          sh 'git push origin HEAD:main'
+        }
+      }
+    }
+  }
+}

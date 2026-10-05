@@ -30,14 +30,18 @@ Code change
    └── Terraform format & validate (terraform validate)
        │
        ▼
-4. Build and publish versioned images to Amazon ECR
+4. Build container images and block on HIGH/CRITICAL Trivy findings
+       │
+       ▼
+5. On `main`, push unique images to Amazon ECR and commit their tags to
+   `helm/cat-dog-voting/values.yaml`
 ```
 
 ---
 
 ## 2. Continuous Deployment with Argo CD
 
-After Jenkins publishes images and updates the desired image tag in the Git-tracked Helm values, Argo CD detects the repository change and synchronizes the application to EKS:
+After Jenkins publishes images and updates their ECR repositories and tags in the Git-tracked Helm values, Argo CD detects the repository change and synchronizes the application to EKS. Jenkins does not deploy directly to Kubernetes.
 
 ```text
 Updated Helm values committed to Git

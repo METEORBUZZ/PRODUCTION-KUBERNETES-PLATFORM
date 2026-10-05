@@ -91,10 +91,10 @@ Terraform (IaC)
     └── modules/ecr
 
 Jenkins (CI)
-    └── Lint → Unit Tests → Trivy Scan → Docker Build → Push ECR
+    └── Test → Validate → Build/Scan → Push ECR → Update Helm image tags
 
 Argo CD (GitOps CD)
-    └── Continuous Git-to-Cluster Sync → Automated Drift Correction
+    └── Syncs the Helm chart from Git to EKS → Automated drift correction
 
 Security & Governance:
     ├── Kyverno (Disallow Root, Privileged, HostPath)
@@ -139,6 +139,11 @@ production-kubernetes-platform/
 │       ├── Chart.yaml
 │       ├── values.yaml
 │       └── templates/            # Deployment, Service, Ingress, HPA, PDB, NetworkPolicy
+│
+├── jenkins/                      # Jenkins CI pipeline and image-tag updater
+│   ├── Jenkinsfile
+│   ├── README.md
+│   └── update-image-values.py
 │
 ├── argocd/                       # GitOps specifications
 │   ├── application.yaml          # Argo CD Application (automated sync, prune, self-heal)

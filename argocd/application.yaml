@@ -8,7 +8,7 @@ metadata:
 spec:
   project: catdog-platform-project
   source:
-    repoURL: 'https://github.com/production-kubernetes-platform/platform.git'
+    repoURL: 'https://github.com/METEORBUZZ/PRODUCTION-KUBERNETES-PLATFORM.git'
     targetRevision: main
     path: helm/cat-dog-voting
     helm:

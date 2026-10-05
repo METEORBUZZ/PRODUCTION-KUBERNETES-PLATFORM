@@ -17,7 +17,7 @@ GitOps establishes the Git repository as the **single, immutable source of truth
                          • npm test & tsc lint
                          • Trivy container scan
                          • Docker build & push to Amazon ECR
-                         • Auto-commit updated image tag to Helm values.yaml
+                         • Commit updated ECR image repositories and tags to Helm values.yaml
                                 │
                                 ▼
                        [ Git Repository Updated ]
