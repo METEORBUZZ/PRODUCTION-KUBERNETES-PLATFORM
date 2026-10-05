@@ -1,15 +1,15 @@
 # CI/CD Pipelines & Release Engineering
 
-The platform implements automated Continuous Integration (CI) and Continuous Deployment (CD) workflows powered by GitHub Actions.
+Jenkins runs Continuous Integration (CI). Argo CD handles Continuous Deployment (CD) by reconciling the Kubernetes manifests in Git with the EKS cluster. No GitHub Actions workflows are used.
 
 ---
 
-## 1. Pull Request Pipeline (`.github/workflows/ci.yml`)
+## 1. Continuous Integration with Jenkins
 
-Every pull request initiates a comprehensive validation gate:
+Jenkins validates changes and builds and scans the application images before publishing them to Amazon ECR:
 
 ```text
-PR Created / Updated
+Code change
        │
        ▼
 1. Lint & Test
@@ -28,37 +28,26 @@ PR Created / Updated
 3. Infrastructure Validation
    ├── Kustomize build validation (base + production overlays)
    └── Terraform format & validate (terraform validate)
+       │
+       ▼
+4. Build and publish versioned images to Amazon ECR
 ```
 
 ---
 
-## 2. Production Deployment Pipeline (`.github/workflows/cd.yml`)
+## 2. Continuous Deployment with Argo CD
 
-Merging code into the `main` branch triggers automated deployment:
+After Jenkins publishes images and updates the desired image tag in the Git-tracked Helm values, Argo CD detects the repository change and synchronizes the application to EKS:
 
 ```text
-Merge to main
+Updated Helm values committed to Git
        │
        ▼
-1. Authenticate with AWS via OIDC
-   (Zero static credentials, uses AWS IAM Role-to-Assume)
+[ Argo CD detects the Git revision ]
        │
        ▼
-2. Build & Push Images to Amazon ECR
-   ├── catdog-backend:<git-sha>
-   └── catdog-frontend:<git-sha>
+[ Argo CD synchronizes the Helm application to EKS ]
        │
        ▼
-3. Deploy to AWS EKS
-   ├── Update image tags in Kustomize overlay
-   └── Apply manifests with kubectl apply -k
-       │
-       ▼
-4. Verify Rollout Status
-   ├── kubectl rollout status deployment/catdog-backend --timeout=180s
-   └── kubectl rollout status deployment/catdog-frontend --timeout=180s
-       │
-       ▼
-5. Automated Post-Deployment Smoke Test
-   └── Executes ./scripts/smoke-test.sh
+[ Kubernetes rolls out the new image versions ]
 ```

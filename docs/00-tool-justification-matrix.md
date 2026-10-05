@@ -59,14 +59,13 @@ In strict accordance with the **No-Overengineering Principle**, every tool and s
 
 ---
 
-### 6. GitHub Actions
-- **Purpose**: Cloud-native Continuous Integration (CI) automation platform.
-- **Why we use it**: Direct integration with the source repository, native AWS OIDC authentication (no long-lived secrets), and automated pull request validation gates.
-- **Problem it solves**: Automates unit tests, TypeScript type checks, Trivy container security scans, and Kustomize/Terraform validation before code merges.
-- **Alternative**: Jenkins, GitLab CI, CircleCI.
-- **Why alternative was not selected**: Jenkins requires provisioning and maintaining dedicated master/agent EC2 instances, plugin maintenance, and credential management; GitHub Actions is serverless and zero-maintenance.
-- **Operational impact**: Automated PR checks eliminate broken code from ever reaching the `main` branch.
-- **Cost impact**: Included in standard GitHub plan (free for public repos, 2,000 min/month for private).
+### 6. Jenkins
+- **Purpose**: Continuous Integration (CI) automation platform.
+- **Why we use it**: Runs the project's test, lint, build, infrastructure-validation, and image-scanning steps in a centrally managed pipeline.
+- **Problem it solves**: Provides repeatable validation and image publishing before changes are promoted for deployment.
+- **Alternative**: GitHub Actions, GitLab CI, CircleCI.
+- **Operational impact**: Jenkins requires a maintained controller and build agents; pipeline configuration and credentials should be managed securely.
+- **Cost impact**: Jenkins is open source; infrastructure and agent capacity incur operating costs.
 
 ---
 
@@ -74,8 +73,8 @@ In strict accordance with the **No-Overengineering Principle**, every tool and s
 - **Purpose**: Declarative GitOps continuous delivery tool for Kubernetes.
 - **Why we use it**: Keeps the EKS cluster in continuous synchronization with the Git repository, detecting manual cluster drift and providing automated rollbacks.
 - **Problem it solves**: Prevents "snowflake" clusters caused by ad-hoc `kubectl apply` commands; Git is the single source of truth.
-- **Alternative**: Direct push deployment from CI (e.g. running `kubectl apply` inside GitHub Actions).
-- **Why alternative was not selected**: CI push deployments require giving GitHub Actions cluster-admin credentials to the Kubernetes API, violating least-privilege security, and cannot detect out-of-band cluster drift.
+- **Alternative**: Direct push deployment from CI (e.g. running `kubectl apply` inside Jenkins).
+- **Why alternative was not selected**: CI push deployments require granting the CI system access to the Kubernetes API and cannot continuously detect or reconcile out-of-band cluster drift.
 - **Operational impact**: Automated sync, self-healing, visual deployment status, and instant revision rollback.
 - **Cost impact**: Minimal footprint (runs inside EKS cluster consuming ~0.2 CPU and 256MB RAM).
 

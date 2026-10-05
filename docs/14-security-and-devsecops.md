@@ -14,7 +14,7 @@ Security is embedded into every lifecycle phase—from developer IDE to containe
 | **Admission Control** | Pod Security Standards (`restricted`), declarative policy enforcement | Kubernetes PSA + Kyverno ClusterPolicies |
 | **Runtime & Pods** | Read-only root filesystem, dropped `ALL` capabilities, zero-trust network policies | Pod SecurityContext, Kubernetes NetworkPolicy |
 | **Secrets** | Envelope encryption with KMS, external secret synchronization via IRSA | AWS Secrets Manager + External Secrets Operator |
-| **Cloud IAM** | Least-privilege IAM policies, passwordless GitHub Actions OIDC auth | AWS IAM / IRSA |
+| **Cloud IAM** | Least-privilege IAM policies and securely managed Jenkins AWS access | AWS IAM / IRSA |
 
 ---
 

@@ -13,7 +13,7 @@ GitOps establishes the Git repository as the **single, immutable source of truth
 [ GitHub Repository ] ────► Pull Request Triggered
                                 │
                                 ▼
-                       [ GitHub Actions CI ]
+                       [ Jenkins CI ]
                          • npm test & tsc lint
                          • Trivy container scan
                          • Docker build & push to Amazon ECR

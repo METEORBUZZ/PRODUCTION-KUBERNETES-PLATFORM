@@ -52,7 +52,7 @@ This comprehensive checklist verifies that the platform complies with all securi
 - [x] SRE alerting rules configured for high error rates (> 5%), elevated latency (> 500ms), and pod crash loops.
 
 ## 7. Delivery & Reliability Testing
-- [x] GitHub Actions CI pipeline executing tests, type checks, linting, and Trivy scans.
+- [x] Jenkins CI pipeline executing tests, type checks, linting, and Trivy scans.
 - [x] Argo CD GitOps controller continuously synchronizing Git repository to EKS.
 - [x] High-concurrency load test (`scripts/load-test.js`) executed and verified with zero lost votes.
 - [x] Pod kill resilience test (`scripts/failure-test.sh`) verified with zero traffic disruption.

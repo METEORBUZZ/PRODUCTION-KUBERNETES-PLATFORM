@@ -1,6 +1,5 @@
 # 🚀 Production Kubernetes Platform on AWS
 
-[![CI Pipeline](https://github.com/production-kubernetes-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/production-kubernetes-platform/actions)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.31-326ce5.svg?logo=kubernetes&logoColor=white)](https://kubernetes.io)
 [![AWS EKS](https://img.shields.io/badge/AWS-EKS-FF9900.svg?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/eks/)
 [![Terraform](https://img.shields.io/badge/Terraform-1.5+-844FBA.svg?logo=terraform&logoColor=white)](https://terraform.io)
@@ -33,7 +32,7 @@ Amazon ECR                Secure, immutable OCI container registry
 Terraform                 Declarative Infrastructure as Code (IaC)
 Amazon EKS                Multi-AZ managed Kubernetes control plane
 Helm                      Modular Kubernetes package management
-GitHub Actions            Continuous Integration (CI) and Trivy security scanning
+Jenkins                   Continuous Integration (CI) and Trivy security scanning
 Argo CD                   Declarative GitOps Continuous Delivery (CD)
 AWS ALB Controller        Native AWS Ingress integration with ACM TLS 1.3
 Amazon RDS PostgreSQL     Multi-AZ relational persistence (ACID safe)
@@ -44,7 +43,7 @@ Prometheus & Grafana      Metrics collection & SRE visualization
 Amazon CloudWatch         Centralized platform and container audit logging
 ```
 
-> **Strictly Avoided**: Jenkins, GitLab CI, Ansible, Istio, Kafka, Redis, Elasticsearch/Logstash/Kibana, Loki, Jaeger, Rancher, and artificial microservices.
+> **Strictly Avoided**: GitHub Actions, GitLab CI, Ansible, Istio, Kafka, Redis, Elasticsearch/Logstash/Kibana, Loki, Jaeger, Rancher, and artificial microservices.
 
 *See the complete [Mandatory Tool Justification Matrix](file:///Users/apple/Downloads/Production%20Kubernetes%20Platform/docs/00-tool-justification-matrix.md).*
 
@@ -91,7 +90,7 @@ Terraform (IaC)
     ├── modules/iam
     └── modules/ecr
 
-GitHub Actions (CI)
+Jenkins (CI)
     └── Lint → Unit Tests → Trivy Scan → Docker Build → Push ECR
 
 Argo CD (GitOps CD)
@@ -161,10 +160,6 @@ production-kubernetes-platform/
 │   └── failure-test.sh           # Resilience suite (pod kill, rolling update, rollback)
 │
 ├── docs/                         # Comprehensive 18-part engineering documentation
-├── .github/workflows/
-│   ├── ci.yml                    # Pull Request CI pipeline (test, trivy, k8s/tf validate)
-│   └── cd.yml                    # Main branch CD pipeline (OIDC auth, ECR push, rollout)
-│
 ├── docker-compose.yml            # Local simulation stack
 ├── Makefile                      # Standardized developer workflows
 ├── README.md                     # Master documentation
